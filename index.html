@@ -1,0 +1,1503 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>K-Research — Bachelorarbeit</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    :root {
+      --bg: #0a0a0a; --bg2: #111; --bg3: #1a1a1a;
+      --accent: #4ecca3; --accent2: #e879f9; --accent3: #f97316; --accent4: #60a5fa;
+      --text: #e2e8f0; --muted: #64748b;
+      --border: rgba(255,255,255,0.07);
+      --radius: 10px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, sans-serif; min-height: 100vh; overflow-x: hidden; }
+
+    /* ─── HEADER ─── */
+    header {
+      display: flex; align-items: center; gap: 24px;
+      padding: 0 24px; height: 56px;
+      background: var(--bg2); border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .logo {
+      font-size: 15px; font-weight: 700; letter-spacing: 0.05em;
+      color: var(--accent); white-space: nowrap;
+    }
+    nav { display: flex; gap: 4px; flex-wrap: wrap; }
+    .tab-btn {
+      background: none; border: none; color: var(--muted);
+      padding: 6px 14px; border-radius: 6px; font-size: 13px;
+      cursor: pointer; transition: all 0.15s; white-space: nowrap;
+    }
+    .tab-btn:hover { color: var(--text); background: var(--bg3); }
+    .tab-btn.active { color: var(--accent); background: rgba(78,204,163,0.1); }
+
+    /* ─── TAB PANES ─── */
+    .tab-pane { display: none; padding: 24px; }
+    .tab-pane.active { display: block; }
+
+    /* ─── SECTION TITLE ─── */
+    .section-title {
+      font-size: 11px; font-weight: 600; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 16px;
+    }
+
+    /* ══════════════════════════════════════
+       TAB 1 — TIMELINE
+    ══════════════════════════════════════ */
+    #tab-timeline { padding: 0; }
+    .timeline-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 24px 12px; border-bottom: 1px solid var(--border);
+    }
+    .timeline-header h2 { font-size: 14px; font-weight: 600; color: var(--text); }
+    .tl-zoom-btns { display: flex; gap: 6px; }
+    .tl-zoom-btn {
+      background: var(--bg3); border: 1px solid var(--border);
+      color: var(--muted); padding: 4px 12px; border-radius: 6px;
+      font-size: 12px; cursor: pointer; transition: all 0.15s;
+    }
+    .tl-zoom-btn:hover, .tl-zoom-btn.active { color: var(--accent); border-color: var(--accent); }
+    #timeline-canvas-wrap {
+      overflow: hidden; cursor: grab; user-select: none;
+      background: var(--bg); position: relative;
+      height: calc(100vh - 56px - 54px - 160px);
+    }
+    #timeline-canvas-wrap:active { cursor: grabbing; }
+    #timeline-svg { display: block; }
+    .deadline-dock {
+      padding: 12px 24px; border-top: 1px solid var(--border);
+      background: var(--bg2);
+    }
+    .dock-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 10px;
+    }
+    .dock-cards { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+    .dock-card {
+      flex: 0 0 auto; min-width: 150px; background: var(--bg3);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 10px 12px;
+    }
+    .dock-card.type-deadline { border-color: #ef4444; }
+    .dock-card.type-done { opacity: 0.45; }
+    .dock-card-label { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+    .dock-card-date { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+    .dock-card-countdown { font-size: 11px; font-weight: 600; }
+    .dock-card-countdown.future { color: var(--accent); }
+    .dock-card-countdown.past { color: var(--muted); }
+    .dock-card-countdown.today { color: #ef4444; }
+
+    /* ══════════════════════════════════════
+       TAB 2 — SOURCES
+    ══════════════════════════════════════ */
+    .sources-toolbar {
+      display: flex; align-items: center; gap: 16px;
+      margin-bottom: 20px; flex-wrap: wrap;
+    }
+    #source-search {
+      background: var(--bg2); border: 1px solid var(--border);
+      color: var(--text); padding: 8px 14px; border-radius: var(--radius);
+      font-size: 13px; width: 220px; outline: none;
+    }
+    #source-search:focus { border-color: var(--accent); }
+    .filter-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .chip {
+      background: var(--bg2); border: 1px solid var(--border);
+      color: var(--muted); padding: 5px 12px; border-radius: 20px;
+      font-size: 12px; cursor: pointer; transition: all 0.15s;
+    }
+    .chip:hover { color: var(--text); }
+    .chip.active { color: var(--accent); border-color: var(--accent); background: rgba(78,204,163,0.08); }
+    .source-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 14px;
+    }
+    .source-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px;
+      cursor: pointer; transition: border-color 0.15s, transform 0.1s;
+    }
+    .source-card:hover { border-color: rgba(78,204,163,0.4); transform: translateY(-1px); }
+    .card-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .card-num { font-size: 11px; font-weight: 700; color: var(--muted); min-width: 22px; }
+    .badge {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.05em;
+      padding: 2px 8px; border-radius: 4px; text-transform: uppercase;
+    }
+    .badge.hoch { background: rgba(78,204,163,0.15); color: var(--accent); }
+    .badge.mittel { background: rgba(249,115,22,0.15); color: var(--accent3); }
+    .badge.niedrig { background: rgba(100,116,139,0.15); color: var(--muted); }
+    .pdf-icon { font-size: 13px; margin-left: auto; }
+    .card-title {
+      font-size: 13px; font-weight: 600; color: var(--text);
+      margin-bottom: 4px; line-height: 1.4;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .card-authors { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+    .card-kernthese {
+      font-size: 12px; color: var(--text); line-height: 1.45; margin-bottom: 8px;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .card-keywords { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+    .kw {
+      font-size: 10px; background: var(--bg3); border: 1px solid var(--border);
+      color: var(--muted); padding: 2px 7px; border-radius: 4px;
+    }
+    .card-footer { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+    .rq-badge {
+      font-size: 10px; font-weight: 700; padding: 2px 7px;
+      border-radius: 4px; text-transform: uppercase;
+    }
+    .rq-badge.rq1 { background: rgba(232,121,249,0.15); color: var(--accent2); }
+    .rq-badge.rq2 { background: rgba(249,115,22,0.15); color: var(--accent3); }
+    .rq-badge.rq3 { background: rgba(96,165,250,0.15); color: var(--accent4); }
+    .ch-badge {
+      font-size: 10px; background: rgba(255,255,255,0.05); color: var(--muted);
+      padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border);
+    }
+
+    /* ─── SOURCE DETAIL PANEL ─── */
+    #source-panel {
+      position: fixed; top: 56px; right: 0; bottom: 0; width: 440px;
+      background: var(--bg2); border-left: 1px solid var(--border);
+      overflow-y: auto; z-index: 200;
+      transform: translateX(100%); transition: transform 0.25s ease;
+      padding: 24px;
+    }
+    #source-panel.open { transform: translateX(0); }
+    .panel-close {
+      position: absolute; top: 16px; right: 16px;
+      background: var(--bg3); border: 1px solid var(--border);
+      color: var(--muted); width: 28px; height: 28px; border-radius: 6px;
+      cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center;
+    }
+    .panel-close:hover { color: var(--text); }
+    .panel-title { font-size: 16px; font-weight: 700; color: var(--text); line-height: 1.4; margin-bottom: 8px; padding-right: 36px; }
+    .panel-authors { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+    .panel-section { margin-bottom: 16px; }
+    .panel-section-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 6px;
+    }
+    .panel-section-text { font-size: 13px; color: var(--text); line-height: 1.55; }
+    blockquote {
+      border-left: 3px solid var(--accent); padding: 10px 14px;
+      background: rgba(78,204,163,0.05); border-radius: 0 var(--radius) var(--radius) 0;
+      font-size: 13px; color: var(--text); font-style: italic; line-height: 1.55;
+    }
+    .panel-keywords { display: flex; flex-wrap: wrap; gap: 5px; }
+    .panel-rqs { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+    .cite-box {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 10px 12px;
+      font-size: 12px; font-family: monospace; color: var(--accent);
+      cursor: pointer; position: relative;
+    }
+    .cite-box:hover::after {
+      content: 'Kopiert!'; position: absolute; right: 8px; top: 50%;
+      transform: translateY(-50%); font-size: 11px; color: var(--muted);
+    }
+    .apa-text { font-size: 12px; color: var(--muted); line-height: 1.5; }
+    #panel-overlay {
+      display: none; position: fixed; top: 56px; left: 0; right: 440px; bottom: 0;
+      z-index: 190; background: transparent;
+    }
+    #panel-overlay.active { display: block; }
+
+    /* ══════════════════════════════════════
+       TAB 3 — CONCEPT GRAPH
+    ══════════════════════════════════════ */
+    #tab-graph { padding: 0; }
+    .graph-toolbar {
+      display: flex; gap: 6px; align-items: center;
+      padding: 12px 24px; border-bottom: 1px solid var(--border);
+      background: var(--bg2); flex-wrap: wrap;
+    }
+    .graph-filter-btn {
+      background: var(--bg3); border: 1px solid var(--border);
+      color: var(--muted); padding: 5px 12px; border-radius: 6px;
+      font-size: 12px; cursor: pointer; transition: all 0.15s;
+    }
+    .graph-filter-btn:hover { color: var(--text); }
+    .graph-filter-btn.active { color: var(--accent); border-color: var(--accent); background: rgba(78,204,163,0.08); }
+    #graph-svg-wrap {
+      position: relative;
+      height: calc(100vh - 56px - 53px - 80px);
+      overflow: hidden;
+    }
+    #graph-svg { width: 100%; height: 100%; display: block; }
+    #graph-info {
+      margin: 0 24px 16px; padding: 12px 16px;
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); font-size: 13px; min-height: 52px;
+      color: var(--muted);
+    }
+    /* ── graph node/link styles (inline SVG) handled in JS ── */
+
+    /* ══════════════════════════════════════
+       TAB 4 — INFLUENCE MAP
+    ══════════════════════════════════════ */
+    #tab-influence { padding: 0; }
+    .influence-toolbar {
+      display: flex; gap: 8px; align-items: center;
+      padding: 12px 24px; border-bottom: 1px solid var(--border);
+      background: var(--bg2);
+    }
+    .influence-toolbar button {
+      background: var(--bg3); border: 1px solid var(--border);
+      color: var(--text); padding: 6px 14px; border-radius: 6px;
+      font-size: 13px; cursor: pointer; transition: all 0.15s;
+    }
+    .influence-toolbar button:hover { border-color: var(--accent); color: var(--accent); }
+    .influence-toolbar button.active { background: rgba(78,204,163,0.1); border-color: var(--accent); color: var(--accent); }
+    #edge-hint {
+      font-size: 12px; color: var(--accent3); padding: 0 8px;
+    }
+    #influence-svg {
+      display: block; width: 100%;
+      height: calc(100vh - 56px - 54px);
+      cursor: default;
+    }
+
+    /* ══════════════════════════════════════
+       TAB 5 — NOTES
+    ══════════════════════════════════════ */
+    .notes-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 1100px; }
+    @media (max-width: 700px) { .notes-layout { grid-template-columns: 1fr; } }
+    .notes-input-area {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    #note-input {
+      background: transparent; border: none; color: var(--text);
+      font-size: 13px; line-height: 1.6; resize: vertical;
+      min-height: 180px; outline: none; width: 100%; font-family: inherit;
+    }
+    .notes-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    #add-note-btn {
+      background: var(--accent); color: #0a0a0a; border: none;
+      padding: 8px 18px; border-radius: 6px; font-size: 13px;
+      font-weight: 700; cursor: pointer; transition: opacity 0.15s;
+    }
+    #add-note-btn:hover { opacity: 0.85; }
+    .process-toggle {
+      display: flex; align-items: center; gap: 7px;
+      font-size: 12px; color: var(--muted); cursor: pointer;
+    }
+    .process-toggle input { accent-color: var(--accent2); cursor: pointer; }
+    .notes-list { display: flex; flex-direction: column; gap: 10px; }
+    .note-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 12px 14px;
+    }
+    .note-card.process { border-color: rgba(232,121,249,0.3); }
+    .note-meta {
+      font-size: 11px; color: var(--muted); margin-bottom: 7px;
+      display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
+    }
+    .note-tag {
+      font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 3px;
+      background: rgba(78,204,163,0.15); color: var(--accent);
+    }
+    .note-tag.rq1 { background: rgba(232,121,249,0.15); color: var(--accent2); }
+    .note-tag.rq2 { background: rgba(249,115,22,0.15); color: var(--accent3); }
+    .note-tag.rq3 { background: rgba(96,165,250,0.15); color: var(--accent4); }
+    .note-text { font-size: 13px; color: var(--text); line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
+    .note-actions { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+    .delete-note {
+      font-size: 11px; color: var(--muted); background: none; border: none;
+      cursor: pointer; padding: 0;
+    }
+    .delete-note:hover { color: #ef4444; }
+    .process-badge {
+      font-size: 11px; color: var(--accent2);
+    }
+    .empty-notes { color: var(--muted); font-size: 13px; }
+
+    /* ─── SCROLLBAR ─── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">K-Research</div>
+  <nav>
+    <button class="tab-btn active" data-tab="timeline">Timeline</button>
+    <button class="tab-btn" data-tab="sources">Sources</button>
+    <button class="tab-btn" data-tab="graph">Concept Graph</button>
+    <button class="tab-btn" data-tab="influence">Influence Map</button>
+    <button class="tab-btn" data-tab="notes">Notes</button>
+  </nav>
+</header>
+
+<!-- ══ TAB 1: TIMELINE ══ -->
+<div id="tab-timeline" class="tab-pane active">
+  <div class="timeline-header">
+    <h2 id="tl-project-title">Bachelorarbeit</h2>
+    <div class="tl-zoom-btns">
+      <button class="tl-zoom-btn" data-zoom="week">Woche</button>
+      <button class="tl-zoom-btn active" data-zoom="month">Monat</button>
+      <button class="tl-zoom-btn" data-zoom="semester">Semester</button>
+    </div>
+  </div>
+  <div id="timeline-canvas-wrap">
+    <svg id="timeline-svg"></svg>
+  </div>
+  <div class="deadline-dock">
+    <div class="dock-label">Nächste Meilensteine</div>
+    <div class="dock-cards" id="dock-cards"></div>
+  </div>
+</div>
+
+<!-- ══ TAB 2: SOURCES ══ -->
+<div id="tab-sources" class="tab-pane">
+  <div class="sources-toolbar">
+    <input id="source-search" placeholder="Suchen..." autocomplete="off" />
+    <div class="filter-chips" id="filter-chips">
+      <button class="chip active" data-filter="all">Alle 13</button>
+      <button class="chip" data-filter="hoch">Hoch</button>
+      <button class="chip" data-filter="mittel">Mittel</button>
+      <button class="chip" data-filter="niedrig">Niedrig</button>
+      <button class="chip" data-filter="pdf">PDF verfügbar</button>
+    </div>
+  </div>
+  <div id="source-grid" class="source-grid"></div>
+</div>
+
+<!-- ── Source Detail Panel ── -->
+<div id="source-panel">
+  <button class="panel-close" id="panel-close-btn">×</button>
+  <div id="panel-content"></div>
+</div>
+<div id="panel-overlay"></div>
+
+<!-- ══ TAB 3: CONCEPT GRAPH ══ -->
+<div id="tab-graph" class="tab-pane">
+  <div class="graph-toolbar">
+    <button class="graph-filter-btn active" data-gfilter="all">Alle</button>
+    <button class="graph-filter-btn" data-gfilter="sources">Sources only</button>
+    <button class="graph-filter-btn" data-gfilter="themes">Themes only</button>
+    <button class="graph-filter-btn" data-gfilter="chapters">+ Chapters</button>
+    <button class="graph-filter-btn" data-gfilter="rqs">+ RQs</button>
+  </div>
+  <div id="graph-svg-wrap">
+    <svg id="graph-svg"></svg>
+  </div>
+  <div id="graph-info">Klicke einen Knoten für Details.</div>
+</div>
+
+<!-- ══ TAB 4: INFLUENCE MAP ══ -->
+<div id="tab-influence" class="tab-pane">
+  <div class="influence-toolbar">
+    <button id="add-node-btn">+ Node</button>
+    <button id="add-edge-btn">→ Edge</button>
+    <button id="reset-btn">Reset</button>
+    <button id="save-inf-btn">Save</button>
+    <span id="edge-hint" style="display:none">Quellknoten klicken, dann Zielknoten</span>
+  </div>
+  <svg id="influence-svg"></svg>
+</div>
+
+<!-- ══ TAB 5: NOTES ══ -->
+<div id="tab-notes" class="tab-pane">
+  <div class="notes-layout">
+    <div class="notes-input-area">
+      <textarea id="note-input" placeholder="Gedanken, Beobachtungen, offene Fragen...&#10;&#10;Tipp: Beginne mit #rq1, #rq2, oder #rq3 um die Notiz zu taggen."></textarea>
+      <div class="notes-actions">
+        <button id="add-note-btn">Notiz hinzufügen</button>
+        <label class="process-toggle">
+          <input type="checkbox" id="process-toggle" />
+          <span>Für Claude-Aufbereitung markieren</span>
+        </label>
+      </div>
+    </div>
+    <div id="notes-list" class="notes-list"></div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+// KCAL SYSTEM
+// ══════════════════════════════════════════════════════════════════
+const KCAL = {
+  MONTH_DAYS: 28,
+  MONTHS_PER_YEAR: 13,
+  YEAR_DAYS: 364,
+  ANCHOR: new Date('2026-01-01T00:00:00'),
+  from(date) {
+    const d = new Date(date); d.setHours(0,0,0,0);
+    const anchor = new Date(this.ANCHOR);
+    anchor.setHours(0,0,0,0);
+    const diffDays = Math.floor((d - anchor) / 86400000);
+    const year = 2026 + Math.floor(diffDays / this.YEAR_DAYS);
+    const dayOfYear = ((diffDays % this.YEAR_DAYS) + this.YEAR_DAYS) % this.YEAR_DAYS;
+    const month = Math.floor(dayOfYear / this.MONTH_DAYS) + 1;
+    const day = (dayOfYear % this.MONTH_DAYS) + 1;
+    const week = Math.floor(dayOfYear / 7) + 1;
+    return { year, month, day, week, dayOfYear };
+  },
+  format(date) {
+    const k = this.from(date);
+    return `M${k.month}/T${k.day} W${k.week} (KY${k.year})`;
+  },
+  short(date) {
+    const k = this.from(date);
+    return `M${k.month}·T${k.day}`;
+  }
+};
+
+// ══════════════════════════════════════════════════════════════════
+// GLOBALS
+// ══════════════════════════════════════════════════════════════════
+let projectData = null;
+let sourcesData = null;
+let graphInitialized = false;
+let currentFilter = 'all';
+let currentSearchText = '';
+let graphFilter = 'all';
+let simulation = null;
+
+// ══════════════════════════════════════════════════════════════════
+// BOOT — load JSON, then initialize
+// ══════════════════════════════════════════════════════════════════
+Promise.all([
+  fetch('data/project.json').then(r => r.json()),
+  fetch('data/sources.json').then(r => r.json())
+]).then(([proj, sources]) => {
+  projectData = proj;
+  sourcesData = sources;
+  initTimeline();
+  initSources();
+  initNotes();
+  initInfluence();
+}).catch(err => {
+  console.error('Data load failed:', err);
+  document.body.innerHTML += `<div style="color:#ef4444;padding:24px;">Fehler beim Laden der Daten: ${err.message}<br>Stelle sicher, dass data/project.json und data/sources.json existieren.</div>`;
+});
+
+// ══════════════════════════════════════════════════════════════════
+// TAB SWITCHING
+// ══════════════════════════════════════════════════════════════════
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tab = btn.dataset.tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(`tab-${tab}`).classList.add('active');
+    if (tab === 'graph' && !graphInitialized && projectData && sourcesData) {
+      initGraph();
+      graphInitialized = true;
+    }
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════
+// ── TAB 1: TIMELINE ──────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════
+const zoomLevels = { week: 20, month: 6, semester: 2 };
+let tlPxPerDay = 6;
+let tlOffsetX = 0;
+let tlDragging = false;
+let tlDragStartX = 0;
+let tlDragStartOffset = 0;
+const TL_HEIGHT = 200;
+const TL_BAR_Y = 90;
+const TL_BAR_H = 18;
+
+function initTimeline() {
+  if (!projectData) return;
+  document.getElementById('tl-project-title').textContent = projectData.project.title;
+
+  const wrap = document.getElementById('timeline-canvas-wrap');
+  const svg = document.getElementById('timeline-svg');
+  svg.setAttribute('height', TL_HEIGHT);
+
+  renderTimeline();
+  renderDock();
+
+  // Zoom buttons
+  document.querySelectorAll('.tl-zoom-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tl-zoom-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      tlPxPerDay = zoomLevels[btn.dataset.zoom];
+      renderTimeline();
+    });
+  });
+
+  // Drag to pan
+  wrap.addEventListener('mousedown', e => {
+    tlDragging = true;
+    tlDragStartX = e.clientX;
+    tlDragStartOffset = tlOffsetX;
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', e => {
+    if (!tlDragging) return;
+    tlOffsetX = tlDragStartOffset + (e.clientX - tlDragStartX);
+    renderTimeline();
+  });
+  window.addEventListener('mouseup', () => { tlDragging = false; });
+
+  // Scroll to zoom
+  wrap.addEventListener('wheel', e => {
+    e.preventDefault();
+    const zoomKeys = ['week','month','semester'];
+    const zoomVals = [20,6,2];
+    const curr = zoomVals.indexOf(tlPxPerDay);
+    if (e.deltaY < 0 && curr > 0) {
+      tlPxPerDay = zoomVals[curr - 1];
+    } else if (e.deltaY > 0 && curr < zoomVals.length - 1) {
+      tlPxPerDay = zoomVals[curr + 1];
+    }
+    document.querySelectorAll('.tl-zoom-btn').forEach(b => {
+      b.classList.toggle('active', zoomLevels[b.dataset.zoom] === tlPxPerDay);
+    });
+    renderTimeline();
+  }, { passive: false });
+}
+
+function getDateX(dateStr) {
+  const anchor = new Date(projectData.project.start);
+  anchor.setHours(0,0,0,0);
+  const d = new Date(dateStr);
+  d.setHours(0,0,0,0);
+  const diff = Math.floor((d - anchor) / 86400000);
+  return 60 + diff * tlPxPerDay + tlOffsetX;
+}
+
+function renderTimeline() {
+  if (!projectData) return;
+  const wrap = document.getElementById('timeline-canvas-wrap');
+  const W = wrap.clientWidth || window.innerWidth;
+  const svg = document.getElementById('timeline-svg');
+  svg.setAttribute('width', W);
+  svg.setAttribute('height', TL_HEIGHT);
+  svg.innerHTML = '';
+
+  const ns = 'http://www.w3.org/2000/svg';
+  const proj = projectData.project;
+  const milestones = projectData.milestones;
+
+  // Project start/end
+  const startX = getDateX(proj.start);
+  const endX = getDateX(proj.end);
+  const barW = endX - startX;
+
+  // Background bar (full track)
+  const track = document.createElementNS(ns, 'rect');
+  track.setAttribute('x', startX); track.setAttribute('y', TL_BAR_Y);
+  track.setAttribute('width', Math.max(barW, 0)); track.setAttribute('height', TL_BAR_H);
+  track.setAttribute('rx', 5);
+  track.setAttribute('fill', 'rgba(78,204,163,0.12)');
+  track.setAttribute('stroke', 'rgba(78,204,163,0.25)');
+  track.setAttribute('stroke-width', '1');
+  svg.appendChild(track);
+
+  // Progress bar (from start to today)
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayX = getDateX(today.toISOString().split('T')[0]);
+  const progressW = Math.min(Math.max(todayX - startX, 0), barW);
+  const progress = document.createElementNS(ns, 'rect');
+  progress.setAttribute('x', startX); progress.setAttribute('y', TL_BAR_Y);
+  progress.setAttribute('width', progressW); progress.setAttribute('height', TL_BAR_H);
+  progress.setAttribute('rx', 5);
+  progress.setAttribute('fill', 'rgba(78,204,163,0.35)');
+  svg.appendChild(progress);
+
+  // Month labels
+  const startDate = new Date(proj.start); startDate.setHours(0,0,0,0);
+  const endDate = new Date(proj.end); endDate.setHours(0,0,0,0);
+  const months = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+  let cur = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+  while (cur <= endDate) {
+    const x = getDateX(cur.toISOString().split('T')[0]);
+    if (x >= 0 && x <= W) {
+      const line = document.createElementNS(ns, 'line');
+      line.setAttribute('x1', x); line.setAttribute('y1', TL_BAR_Y - 20);
+      line.setAttribute('x2', x); line.setAttribute('y2', TL_BAR_Y + TL_BAR_H + 4);
+      line.setAttribute('stroke', 'rgba(255,255,255,0.06)'); line.setAttribute('stroke-width', '1');
+      svg.appendChild(line);
+      const lbl = document.createElementNS(ns, 'text');
+      lbl.setAttribute('x', x + 4); lbl.setAttribute('y', TL_BAR_Y - 6);
+      lbl.setAttribute('font-size', '10'); lbl.setAttribute('fill', '#64748b');
+      lbl.setAttribute('font-family', 'system-ui, sans-serif');
+      lbl.textContent = `${months[cur.getMonth()]} ${cur.getFullYear()}`;
+      svg.appendChild(lbl);
+    }
+    cur = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
+  }
+
+  // KCAL week ticks (every 7 days)
+  if (tlPxPerDay >= 4) {
+    let d = new Date(startDate);
+    while (d <= endDate) {
+      const k = KCAL.from(d);
+      if (k.day === 1) {
+        const x = getDateX(d.toISOString().split('T')[0]);
+        if (x >= 0 && x <= W) {
+          const line = document.createElementNS(ns, 'line');
+          line.setAttribute('x1', x); line.setAttribute('y1', TL_BAR_Y + TL_BAR_H);
+          line.setAttribute('x2', x); line.setAttribute('y2', TL_BAR_Y + TL_BAR_H + 12);
+          line.setAttribute('stroke', 'rgba(78,204,163,0.2)'); line.setAttribute('stroke-width', '1');
+          svg.appendChild(line);
+          if (tlPxPerDay >= 6) {
+            const lbl = document.createElementNS(ns, 'text');
+            lbl.setAttribute('x', x + 3); lbl.setAttribute('y', TL_BAR_Y + TL_BAR_H + 22);
+            lbl.setAttribute('font-size', '9'); lbl.setAttribute('fill', 'rgba(78,204,163,0.5)');
+            lbl.setAttribute('font-family', 'system-ui, sans-serif');
+            lbl.textContent = KCAL.short(d);
+            svg.appendChild(lbl);
+          }
+        }
+      }
+      d.setDate(d.getDate() + 1);
+    }
+  }
+
+  // Milestones
+  milestones.forEach((ms, i) => {
+    const x = getDateX(ms.date);
+    if (x < -50 || x > W + 50) return;
+    const isAbove = i % 2 === 0;
+    const labelY = isAbove ? TL_BAR_Y - 32 : TL_BAR_Y + TL_BAR_H + 42;
+    const tickY1 = isAbove ? TL_BAR_Y - 18 : TL_BAR_Y + TL_BAR_H;
+    const tickY2 = isAbove ? TL_BAR_Y : TL_BAR_Y + TL_BAR_H + 28;
+    const color = ms.type === 'done' ? '#4ecca3' : ms.type === 'deadline' ? '#ef4444' : '#94a3b8';
+
+    // Tick line
+    const tickLine = document.createElementNS(ns, 'line');
+    tickLine.setAttribute('x1', x); tickLine.setAttribute('y1', tickY1);
+    tickLine.setAttribute('x2', x); tickLine.setAttribute('y2', tickY2);
+    tickLine.setAttribute('stroke', color); tickLine.setAttribute('stroke-width', '1.5');
+    tickLine.setAttribute('stroke-dasharray', ms.type === 'planned' ? '3,2' : 'none');
+    svg.appendChild(tickLine);
+
+    // Marker shape
+    if (ms.type === 'done') {
+      // Filled circle
+      const circle = document.createElementNS(ns, 'circle');
+      circle.setAttribute('cx', x); circle.setAttribute('cy', isAbove ? TL_BAR_Y - 18 : TL_BAR_Y + TL_BAR_H + 18);
+      circle.setAttribute('r', 5); circle.setAttribute('fill', color);
+      svg.appendChild(circle);
+    } else if (ms.type === 'deadline') {
+      // Diamond
+      const cy = isAbove ? TL_BAR_Y - 18 : TL_BAR_Y + TL_BAR_H + 18;
+      const diamond = document.createElementNS(ns, 'polygon');
+      diamond.setAttribute('points', `${x},${cy-7} ${x+5},${cy} ${x},${cy+7} ${x-5},${cy}`);
+      diamond.setAttribute('fill', color);
+      svg.appendChild(diamond);
+    } else {
+      // Open circle
+      const circle = document.createElementNS(ns, 'circle');
+      circle.setAttribute('cx', x); circle.setAttribute('cy', isAbove ? TL_BAR_Y - 18 : TL_BAR_Y + TL_BAR_H + 18);
+      circle.setAttribute('r', 5); circle.setAttribute('fill', 'none');
+      circle.setAttribute('stroke', color); circle.setAttribute('stroke-width', '1.5');
+      svg.appendChild(circle);
+    }
+
+    // Label
+    const lbl = document.createElementNS(ns, 'text');
+    lbl.setAttribute('x', x); lbl.setAttribute('y', labelY);
+    lbl.setAttribute('text-anchor', 'middle');
+    lbl.setAttribute('font-size', '10'); lbl.setAttribute('fill', color);
+    lbl.setAttribute('font-family', 'system-ui, sans-serif');
+    lbl.textContent = ms.label;
+    svg.appendChild(lbl);
+  });
+
+  // TODAY line
+  const tx = getDateX(today.toISOString().split('T')[0]);
+  if (tx >= 0 && tx <= W) {
+    const todayLine = document.createElementNS(ns, 'line');
+    todayLine.setAttribute('x1', tx); todayLine.setAttribute('y1', 10);
+    todayLine.setAttribute('x2', tx); todayLine.setAttribute('y2', TL_HEIGHT - 10);
+    todayLine.setAttribute('stroke', '#ef4444'); todayLine.setAttribute('stroke-width', '1.5');
+    todayLine.setAttribute('stroke-dasharray', '4,3');
+    svg.appendChild(todayLine);
+    const todayLbl = document.createElementNS(ns, 'text');
+    todayLbl.setAttribute('x', tx + 4); todayLbl.setAttribute('y', 22);
+    todayLbl.setAttribute('font-size', '10'); todayLbl.setAttribute('fill', '#ef4444');
+    todayLbl.setAttribute('font-family', 'system-ui, sans-serif');
+    todayLbl.textContent = 'Heute';
+    svg.appendChild(todayLbl);
+  }
+
+  // Project label at bar start
+  if (startX >= 0 && startX <= W) {
+    const projLbl = document.createElementNS(ns, 'text');
+    projLbl.setAttribute('x', startX + 6); projLbl.setAttribute('y', TL_BAR_Y + 13);
+    projLbl.setAttribute('font-size', '11'); projLbl.setAttribute('fill', 'rgba(78,204,163,0.8)');
+    projLbl.setAttribute('font-weight', '600');
+    projLbl.setAttribute('font-family', 'system-ui, sans-serif');
+    projLbl.textContent = 'Bachelorarbeit';
+    svg.appendChild(projLbl);
+  }
+}
+
+function renderDock() {
+  if (!projectData) return;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const milestones = [...projectData.milestones];
+  milestones.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  // Show 5 upcoming/recent
+  const upcoming = milestones.filter(m => {
+    const d = new Date(m.date); d.setHours(0,0,0,0);
+    const diff = Math.round((d - today) / 86400000);
+    return diff >= -3;
+  }).slice(0, 5);
+  if (upcoming.length < 5) {
+    const rest = milestones.filter(m => !upcoming.includes(m));
+    while (upcoming.length < 5 && rest.length > 0) upcoming.unshift(rest.pop());
+  }
+
+  const container = document.getElementById('dock-cards');
+  container.innerHTML = '';
+  upcoming.forEach(ms => {
+    const d = new Date(ms.date); d.setHours(0,0,0,0);
+    const diffDays = Math.round((d - today) / 86400000);
+    let countdownText, countdownClass;
+    if (diffDays === 0) { countdownText = 'Heute'; countdownClass = 'today'; }
+    else if (diffDays > 0) { countdownText = `in ${diffDays}T`; countdownClass = 'future'; }
+    else { countdownText = `vor ${Math.abs(diffDays)}T`; countdownClass = 'past'; }
+
+    const dateStr = d.toLocaleDateString('de-CH', { day:'numeric', month:'short', year:'numeric' });
+
+    const card = document.createElement('div');
+    card.className = `dock-card type-${ms.type}`;
+    card.innerHTML = `
+      <div class="dock-card-label">${ms.label}</div>
+      <div class="dock-card-date">${dateStr}</div>
+      <div class="dock-card-countdown ${countdownClass}">${countdownText}</div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ── TAB 2: SOURCES ───────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════
+const pdfStatusMap = {
+  pdf_available: { icon: '✅', label: 'PDF' },
+  open_access: { icon: '🌐', label: 'Open Access' },
+  needs_pdf: { icon: '⏳', label: 'PDF fehlt' },
+  needs_library: { icon: '📚', label: 'Bibliothek' }
+};
+const typeMap = {
+  journal_article: 'Artikel',
+  book: 'Buch',
+  conference: 'Konferenz'
+};
+
+function initSources() {
+  renderSourceGrid();
+
+  document.getElementById('source-search').addEventListener('input', e => {
+    currentSearchText = e.target.value.toLowerCase();
+    renderSourceGrid();
+  });
+
+  document.getElementById('filter-chips').addEventListener('click', e => {
+    const chip = e.target.closest('.chip');
+    if (!chip) return;
+    currentFilter = chip.dataset.filter;
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    renderSourceGrid();
+  });
+
+  document.getElementById('panel-close-btn').addEventListener('click', closePanel);
+  document.getElementById('panel-overlay').addEventListener('click', closePanel);
+}
+
+function filterSources() {
+  return sourcesData.filter(s => {
+    let pass = true;
+    if (currentFilter === 'hoch') pass = s.relevanz === 'hoch';
+    else if (currentFilter === 'mittel') pass = s.relevanz === 'mittel';
+    else if (currentFilter === 'niedrig') pass = s.relevanz === 'niedrig';
+    else if (currentFilter === 'pdf') pass = s.status === 'pdf_available' || s.status === 'open_access';
+    if (pass && currentSearchText) {
+      const haystack = [s.title, s.authors, s.kernthese, ...(s.keywords || []), ...(s.themes || [])].join(' ').toLowerCase();
+      pass = haystack.includes(currentSearchText);
+    }
+    return pass;
+  });
+}
+
+function renderSourceGrid() {
+  const grid = document.getElementById('source-grid');
+  const filtered = filterSources();
+  grid.innerHTML = '';
+  filtered.forEach(s => {
+    const pdfInfo = pdfStatusMap[s.status] || { icon: '?', label: s.status };
+    const rqBadges = (s.rqs || []).map(r => `<span class="rq-badge ${r}">${r.toUpperCase()}</span>`).join('');
+    const chBadges = (s.chapters || []).map(c => `<span class="ch-badge">${c}</span>`).join('');
+    const kwChips = (s.keywords || []).slice(0,3).map(k => `<span class="kw">${k}</span>`).join('');
+    const typeLabel = typeMap[s.type] || s.type;
+
+    const card = document.createElement('div');
+    card.className = 'source-card';
+    card.dataset.relevanz = s.relevanz;
+    card.dataset.id = s.id;
+    card.innerHTML = `
+      <div class="card-top">
+        <span class="card-num">${String(s.num).padStart(2,'0')}</span>
+        <span class="badge ${s.relevanz}">${s.relevanz.charAt(0).toUpperCase() + s.relevanz.slice(1)}</span>
+        <span class="pdf-icon" title="${pdfInfo.label}">${pdfInfo.icon}</span>
+      </div>
+      <div class="card-title">${s.title}</div>
+      <div class="card-authors">${s.authors} · ${s.year} · ${typeLabel}</div>
+      <div class="card-kernthese">${s.kernthese}</div>
+      <div class="card-keywords">${kwChips}</div>
+      <div class="card-footer">${rqBadges}${chBadges}</div>
+    `;
+    card.addEventListener('click', () => openPanel(s));
+    grid.appendChild(card);
+  });
+}
+
+function openPanel(s) {
+  const pdfInfo = pdfStatusMap[s.status] || { icon: '?', label: s.status };
+  const typeLabel = typeMap[s.type] || s.type;
+  const rqBadges = (s.rqs || []).map(r => `<span class="rq-badge ${r}">${r.toUpperCase()}</span>`).join('');
+  const chBadges = (s.chapters || []).map(c => `<span class="ch-badge">${c}</span>`).join('');
+  const kwChips = (s.keywords || []).map(k => `<span class="kw">${k}</span>`).join('');
+
+  // APA citation preview
+  let apa = '';
+  const authorsApa = s.authors || '';
+  if (s.type === 'book') {
+    apa = `${authorsApa} (${s.year}). <em>${s.title}</em>.`;
+  } else {
+    apa = `${authorsApa} (${s.year}). ${s.title}. <em>[Journal]</em>.`;
+  }
+
+  const keyQuoteHtml = s.key_quote
+    ? `<blockquote>"${s.key_quote}"</blockquote>`
+    : `<span style="color:var(--muted);font-size:12px;">Kein Key Quote hinterlegt.</span>`;
+
+  document.getElementById('panel-content').innerHTML = `
+    <div class="panel-title">${s.title}</div>
+    <div class="panel-authors">${s.authors} · ${s.year} · ${typeLabel} · ${pdfInfo.icon} ${pdfInfo.label}</div>
+
+    <div class="panel-section">
+      <div class="panel-section-label">Kernthese</div>
+      <div class="panel-section-text">${s.kernthese}</div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-section-label">Key Quote</div>
+      ${keyQuoteHtml}
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-section-label">Anknüpfungspunkt</div>
+      <div class="panel-section-text">${s.anknuepfung}</div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-section-label">Keywords</div>
+      <div class="panel-keywords">${kwChips}</div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-section-label">Kapitel & Forschungsfragen</div>
+      <div class="panel-rqs">${chBadges}${rqBadges}</div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-section-label">Cite Key</div>
+      <div class="cite-box" id="cite-key-box" title="Klicken zum Kopieren">@${s.cite_key}</div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-section-label">APA Vorschau</div>
+      <div class="apa-text">${apa}</div>
+    </div>
+  `;
+
+  document.getElementById('cite-key-box').addEventListener('click', () => {
+    try {
+      navigator.clipboard.writeText(`@${s.cite_key}`).then(() => {
+        const box = document.getElementById('cite-key-box');
+        const orig = box.textContent;
+        box.textContent = 'Kopiert!';
+        setTimeout(() => { box.textContent = orig; }, 1200);
+      });
+    } catch(e) {}
+  });
+
+  document.getElementById('source-panel').classList.add('open');
+  document.getElementById('panel-overlay').classList.add('active');
+}
+
+function closePanel() {
+  document.getElementById('source-panel').classList.remove('open');
+  document.getElementById('panel-overlay').classList.remove('active');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ── TAB 3: CONCEPT GRAPH ─────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════
+function initGraph() {
+  if (!projectData || !sourcesData) return;
+
+  // Build nodes
+  const nodes = [];
+  const links = [];
+  const nodeMap = {};
+
+  // Source nodes
+  sourcesData.forEach(s => {
+    const color = s.relevanz === 'hoch' ? '#4ecca3' : s.relevanz === 'mittel' ? '#f97316' : '#64748b';
+    const node = { id: s.id, label: s.authors.split(',')[0] + ' ' + s.year, type: 'source', color, data: s };
+    nodes.push(node);
+    nodeMap[s.id] = node;
+  });
+
+  // Theme nodes
+  const allThemes = new Set();
+  sourcesData.forEach(s => (s.themes || []).forEach(t => allThemes.add(t)));
+  allThemes.forEach(t => {
+    const node = { id: `theme_${t}`, label: t, type: 'theme', color: '#e879f9', data: { title: t } };
+    nodes.push(node);
+    nodeMap[`theme_${t}`] = node;
+  });
+
+  // Chapter nodes
+  projectData.chapters.forEach(ch => {
+    const node = { id: ch.id, label: ch.label, type: 'chapter', color: '#f97316', data: ch };
+    nodes.push(node);
+    nodeMap[ch.id] = node;
+  });
+
+  // RQ nodes
+  projectData.researchQuestions.forEach(rq => {
+    const node = { id: rq.id, label: rq.label, type: 'rq', color: '#60a5fa', data: rq };
+    nodes.push(node);
+    nodeMap[rq.id] = node;
+  });
+
+  // Build links
+  sourcesData.forEach(s => {
+    (s.themes || []).forEach(t => {
+      links.push({ source: s.id, target: `theme_${t}`, type: 'theme' });
+    });
+    (s.chapters || []).forEach(c => {
+      links.push({ source: s.id, target: c, type: 'chapter' });
+    });
+    (s.rqs || []).forEach(r => {
+      links.push({ source: s.id, target: r, type: 'rq' });
+    });
+  });
+
+  // Store for filter use
+  window._graphNodes = nodes;
+  window._graphLinks = links;
+  window._graphNodeMap = nodeMap;
+
+  renderGraph('all');
+
+  document.querySelectorAll('.graph-filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      graphFilter = btn.dataset.gfilter;
+      document.querySelectorAll('.graph-filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      if (simulation) { simulation.stop(); simulation = null; }
+      renderGraph(graphFilter);
+    });
+  });
+}
+
+function getVisibleNodesLinks(filter) {
+  const nodes = window._graphNodes;
+  const links = window._graphLinks;
+  let visibleTypes = new Set(['source']);
+  if (filter === 'all') visibleTypes = new Set(['source','theme','chapter','rq']);
+  else if (filter === 'sources') visibleTypes = new Set(['source']);
+  else if (filter === 'themes') visibleTypes = new Set(['source','theme']);
+  else if (filter === 'chapters') visibleTypes = new Set(['source','theme','chapter']);
+  else if (filter === 'rqs') visibleTypes = new Set(['source','theme','rq']);
+  const visNodes = nodes.filter(n => visibleTypes.has(n.type));
+  const visIds = new Set(visNodes.map(n => n.id));
+  const visLinks = links.filter(l => {
+    const sid = typeof l.source === 'object' ? l.source.id : l.source;
+    const tid = typeof l.target === 'object' ? l.target.id : l.target;
+    return visIds.has(sid) && visIds.has(tid);
+  });
+  return { nodes: visNodes, links: visLinks };
+}
+
+function renderGraph(filter) {
+  const svgWrap = document.getElementById('graph-svg-wrap');
+  const svgEl = document.getElementById('graph-svg');
+  svgEl.innerHTML = '';
+  const W = svgWrap.clientWidth || 800;
+  const H = svgWrap.clientHeight || 500;
+
+  const { nodes, links } = getVisibleNodesLinks(filter);
+
+  // Deep clone nodes for simulation
+  const simNodes = nodes.map(n => ({ ...n, x: W/2 + (Math.random()-0.5)*200, y: H/2 + (Math.random()-0.5)*200 }));
+  const nodeById = {};
+  simNodes.forEach(n => nodeById[n.id] = n);
+  const simLinks = links.map(l => ({
+    ...l,
+    source: nodeById[typeof l.source === 'object' ? l.source.id : l.source],
+    target: nodeById[typeof l.target === 'object' ? l.target.id : l.target]
+  })).filter(l => l.source && l.target);
+
+  const svg = d3.select('#graph-svg')
+    .attr('width', W).attr('height', H);
+
+  // Defs arrowhead
+  const defs = svg.append('defs');
+  defs.append('marker')
+    .attr('id','graph-arrow').attr('viewBox','0 -4 8 8')
+    .attr('refX',12).attr('refY',0)
+    .attr('markerWidth',6).attr('markerHeight',6)
+    .attr('orient','auto')
+    .append('path').attr('d','M0,-4L8,0L0,4').attr('fill','rgba(255,255,255,0.15)');
+
+  const gLinks = svg.append('g').attr('class','g-links');
+  const gNodes = svg.append('g').attr('class','g-nodes');
+
+  const linkSel = gLinks.selectAll('line').data(simLinks).enter().append('line')
+    .attr('stroke','rgba(255,255,255,0.12)').attr('stroke-width', 1.2)
+    .attr('marker-end','url(#graph-arrow)');
+
+  const nodeSel = gNodes.selectAll('g').data(simNodes).enter().append('g')
+    .attr('class','graph-node')
+    .style('cursor','pointer')
+    .call(d3.drag()
+      .on('start', (event, d) => { if (!event.active) sim.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+      .on('drag', (event, d) => { d.fx = event.x; d.fy = event.y; })
+      .on('end', (event, d) => { if (!event.active) sim.alphaTarget(0); d.fx = null; d.fy = null; })
+    )
+    .on('click', (event, d) => showGraphInfo(d));
+
+  nodeSel.each(function(d) {
+    const g = d3.select(this);
+    if (d.type === 'source') {
+      g.append('circle').attr('r', 10).attr('fill', d.color).attr('opacity', 0.85);
+    } else if (d.type === 'theme') {
+      // Diamond
+      g.append('rect').attr('x',-9).attr('y',-9).attr('width',18).attr('height',18)
+        .attr('fill', d.color).attr('opacity', 0.85)
+        .attr('transform','rotate(45)');
+    } else if (d.type === 'chapter') {
+      g.append('rect').attr('x',-9).attr('y',-9).attr('width',18).attr('height',18)
+        .attr('rx',4).attr('fill', d.color).attr('opacity', 0.85);
+    } else if (d.type === 'rq') {
+      // Hexagon
+      const hex = [];
+      for (let i = 0; i < 6; i++) {
+        const a = Math.PI/180*(60*i - 30);
+        hex.push([14*Math.cos(a), 14*Math.sin(a)]);
+      }
+      g.append('polygon').attr('points', hex.map(p => p.join(',')).join(' '))
+        .attr('fill', d.color).attr('opacity', 0.85);
+    }
+    // Label
+    g.append('text')
+      .attr('y', d.type === 'rq' ? 22 : 18)
+      .attr('text-anchor','middle')
+      .attr('font-size', d.type === 'source' ? 9 : 10)
+      .attr('fill', 'rgba(255,255,255,0.7)')
+      .attr('font-family','system-ui,sans-serif')
+      .text(d.label.length > 18 ? d.label.slice(0,16)+'…' : d.label);
+  });
+
+  simulation = sim = d3.forceSimulation(simNodes)
+    .force('link', d3.forceLink(simLinks).id(d => d.id).distance(90))
+    .force('charge', d3.forceManyBody().strength(-180))
+    .force('center', d3.forceCenter(W/2, H/2))
+    .force('collision', d3.forceCollide(22))
+    .on('tick', () => {
+      linkSel
+        .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+        .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+      nodeSel.attr('transform', d => `translate(${d.x},${d.y})`);
+    });
+
+  var sim = simulation;
+}
+
+function showGraphInfo(d) {
+  const info = document.getElementById('graph-info');
+  if (d.type === 'source') {
+    const s = d.data;
+    info.innerHTML = `<strong style="color:${d.color}">[Source #${s.num}]</strong> ${s.title} — <em>${s.authors}, ${s.year}</em> — <span style="color:var(--muted)">${s.kernthese}</span>`;
+  } else if (d.type === 'theme') {
+    const count = (window._graphLinks || []).filter(l => {
+      const tid = typeof l.target === 'object' ? l.target.id : l.target;
+      return tid === d.id;
+    }).length;
+    info.innerHTML = `<strong style="color:${d.color}">[Theme]</strong> ${d.label} — ${count} Quellen verknüpft`;
+  } else if (d.type === 'chapter') {
+    info.innerHTML = `<strong style="color:${d.color}">[Kapitel]</strong> ${d.data.label} — Status: ${d.data.status}`;
+  } else if (d.type === 'rq') {
+    info.innerHTML = `<strong style="color:${d.color}">[${d.data.label}]</strong> ${d.data.text}`;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ── TAB 4: INFLUENCE MAP ─────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════
+const defaultNodes = [
+  { id: 'wtp_signal',   label: 'WTP Signal',           x: 120, y: 180, color: '#4ecca3' },
+  { id: 'nudge_plus',   label: 'Nudge+ Intervention',  x: 350, y: 120, color: '#e879f9' },
+  { id: 'fairness',     label: 'Fairness Perception',  x: 350, y: 260, color: '#f59e0b' },
+  { id: 'exp_quality',  label: 'Experience Quality',   x: 580, y: 180, color: '#60a5fa' },
+  { id: 'wom',          label: 'WOM / VOOM',           x: 780, y: 120, color: '#4ecca3' },
+  { id: 'revisit',      label: 'Revisit Intent',       x: 780, y: 260, color: '#4ecca3' }
+];
+const defaultEdges = [
+  { from: 'wtp_signal',  to: 'nudge_plus',  sign: '+', label: '+' },
+  { from: 'wtp_signal',  to: 'fairness',    sign: '+', label: '+' },
+  { from: 'nudge_plus',  to: 'exp_quality', sign: '+', label: '+' },
+  { from: 'fairness',    to: 'exp_quality', sign: '+', label: '+' },
+  { from: 'exp_quality', to: 'wom',         sign: '+', label: '+' },
+  { from: 'exp_quality', to: 'revisit',     sign: '+', label: '+' }
+];
+
+let infNodes = [];
+let infEdges = [];
+let infEdgeMode = false;
+let infEdgeSource = null;
+let infDragging = null;
+let infDragOffX = 0, infDragOffY = 0;
+
+function loadInfluenceState() {
+  try {
+    const saved = localStorage.getItem('k_research_influence');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      infNodes = parsed.nodes || JSON.parse(JSON.stringify(defaultNodes));
+      infEdges = parsed.edges || JSON.parse(JSON.stringify(defaultEdges));
+    } else {
+      infNodes = JSON.parse(JSON.stringify(defaultNodes));
+      infEdges = JSON.parse(JSON.stringify(defaultEdges));
+    }
+  } catch(e) {
+    infNodes = JSON.parse(JSON.stringify(defaultNodes));
+    infEdges = JSON.parse(JSON.stringify(defaultEdges));
+  }
+}
+
+function saveInfluenceState() {
+  try {
+    localStorage.setItem('k_research_influence', JSON.stringify({ nodes: infNodes, edges: infEdges }));
+  } catch(e) {}
+}
+
+function initInfluence() {
+  loadInfluenceState();
+  renderInfluence();
+
+  document.getElementById('add-node-btn').addEventListener('click', () => {
+    const label = prompt('Node-Label:');
+    if (!label) return;
+    const id = 'node_' + Date.now();
+    const svgEl = document.getElementById('influence-svg');
+    const w = svgEl.clientWidth || 900;
+    const h = svgEl.clientHeight || 500;
+    infNodes.push({ id, label, x: Math.random()*(w-200)+80, y: Math.random()*(h-120)+60, color: '#4ecca3' });
+    renderInfluence();
+  });
+
+  document.getElementById('add-edge-btn').addEventListener('click', () => {
+    infEdgeMode = !infEdgeMode;
+    infEdgeSource = null;
+    const btn = document.getElementById('add-edge-btn');
+    btn.classList.toggle('active', infEdgeMode);
+    document.getElementById('edge-hint').style.display = infEdgeMode ? 'inline' : 'none';
+    document.getElementById('influence-svg').style.cursor = infEdgeMode ? 'crosshair' : 'default';
+  });
+
+  document.getElementById('reset-btn').addEventListener('click', () => {
+    if (!confirm('Influence Map zurücksetzen?')) return;
+    infNodes = JSON.parse(JSON.stringify(defaultNodes));
+    infEdges = JSON.parse(JSON.stringify(defaultEdges));
+    saveInfluenceState();
+    renderInfluence();
+  });
+
+  document.getElementById('save-inf-btn').addEventListener('click', () => {
+    saveInfluenceState();
+    const btn = document.getElementById('save-inf-btn');
+    const orig = btn.textContent;
+    btn.textContent = 'Gespeichert ✓';
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  });
+}
+
+function getNodeById(id) {
+  return infNodes.find(n => n.id === id);
+}
+
+function renderInfluence() {
+  const svgEl = document.getElementById('influence-svg');
+  const W = svgEl.clientWidth || window.innerWidth;
+  const H = svgEl.clientHeight || 500;
+  svgEl.innerHTML = '';
+
+  const ns = 'http://www.w3.org/2000/svg';
+
+  // Arrowhead defs
+  const defs = document.createElementNS(ns, 'defs');
+  ['plus','minus'].forEach(type => {
+    const marker = document.createElementNS(ns, 'marker');
+    marker.setAttribute('id', `arrow-${type}`);
+    marker.setAttribute('viewBox', '0 -4 8 8');
+    marker.setAttribute('refX', '62');
+    marker.setAttribute('refY', '0');
+    marker.setAttribute('markerWidth', '6');
+    marker.setAttribute('markerHeight', '6');
+    marker.setAttribute('orient', 'auto');
+    const path = document.createElementNS(ns, 'path');
+    path.setAttribute('d', 'M0,-4L8,0L0,4');
+    path.setAttribute('fill', type === 'plus' ? '#4ecca3' : '#ef4444');
+    marker.appendChild(path);
+    defs.appendChild(marker);
+  });
+  svgEl.appendChild(defs);
+
+  // Edges
+  infEdges.forEach(edge => {
+    const src = getNodeById(edge.from);
+    const tgt = getNodeById(edge.to);
+    if (!src || !tgt) return;
+
+    const midX = (src.x + tgt.x) / 2;
+    const midY = (src.y + tgt.y) / 2;
+    const arrowType = edge.sign === '-' ? 'minus' : 'plus';
+    const strokeColor = edge.sign === '-' ? '#ef4444' : '#4ecca3';
+
+    const line = document.createElementNS(ns, 'line');
+    line.setAttribute('x1', src.x + 60); line.setAttribute('y1', src.y + 20);
+    line.setAttribute('x2', tgt.x); line.setAttribute('y2', tgt.y + 20);
+    line.setAttribute('stroke', strokeColor);
+    line.setAttribute('stroke-width', '1.5');
+    line.setAttribute('opacity', '0.7');
+    line.setAttribute('marker-end', `url(#arrow-${arrowType})`);
+    svgEl.appendChild(line);
+
+    // Edge label with sign toggle
+    const lbl = document.createElementNS(ns, 'text');
+    lbl.setAttribute('x', midX + 60); lbl.setAttribute('y', midY + 20 - 8);
+    lbl.setAttribute('text-anchor', 'middle');
+    lbl.setAttribute('font-size', '13');
+    lbl.setAttribute('font-weight', '700');
+    lbl.setAttribute('fill', strokeColor);
+    lbl.setAttribute('font-family', 'system-ui, sans-serif');
+    lbl.setAttribute('cursor', 'pointer');
+    lbl.textContent = edge.sign === '-' ? '−' : '+';
+    lbl.addEventListener('click', (e) => {
+      e.stopPropagation();
+      edge.sign = edge.sign === '+' ? '-' : '+';
+      edge.label = edge.sign;
+      renderInfluence();
+    });
+    svgEl.appendChild(lbl);
+  });
+
+  // Nodes
+  infNodes.forEach(node => {
+    const g = document.createElementNS(ns, 'g');
+    g.setAttribute('transform', `translate(${node.x},${node.y})`);
+    g.setAttribute('cursor', infEdgeMode ? 'pointer' : 'grab');
+
+    const rect = document.createElementNS(ns, 'rect');
+    rect.setAttribute('x', 0); rect.setAttribute('y', 0);
+    rect.setAttribute('width', 120); rect.setAttribute('height', 40);
+    rect.setAttribute('rx', 8);
+    rect.setAttribute('fill', 'rgba(26,26,26,0.95)');
+    rect.setAttribute('stroke', node.color);
+    rect.setAttribute('stroke-width', '1.5');
+    g.appendChild(rect);
+
+    const text = document.createElementNS(ns, 'text');
+    text.setAttribute('x', 60); text.setAttribute('y', 25);
+    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('font-size', node.label.length > 14 ? '10' : '12');
+    text.setAttribute('font-family', 'system-ui, sans-serif');
+    text.setAttribute('fill', node.color);
+    text.setAttribute('font-weight', '600');
+    text.textContent = node.label;
+    g.appendChild(text);
+
+    // Edge mode: click to select source/target
+    g.addEventListener('click', (e) => {
+      if (!infEdgeMode) return;
+      e.stopPropagation();
+      if (!infEdgeSource) {
+        infEdgeSource = node.id;
+        g.querySelector('rect').setAttribute('stroke-width', '3');
+      } else if (infEdgeSource !== node.id) {
+        const sign = prompt('Edge-Sign: + oder -', '+') || '+';
+        infEdges.push({ from: infEdgeSource, to: node.id, sign, label: sign });
+        infEdgeSource = null;
+        infEdgeMode = false;
+        document.getElementById('add-edge-btn').classList.remove('active');
+        document.getElementById('edge-hint').style.display = 'none';
+        document.getElementById('influence-svg').style.cursor = 'default';
+        renderInfluence();
+      }
+    });
+
+    // Drag
+    let dragActive = false, dx = 0, dy = 0;
+    g.addEventListener('mousedown', (e) => {
+      if (infEdgeMode) return;
+      e.stopPropagation();
+      dragActive = true;
+      const rect = svgEl.getBoundingClientRect();
+      dx = e.clientX - rect.left - node.x;
+      dy = e.clientY - rect.top - node.y;
+      g.setAttribute('cursor','grabbing');
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+    });
+    function onMove(e) {
+      if (!dragActive) return;
+      const svgRect = svgEl.getBoundingClientRect();
+      node.x = Math.max(0, Math.min(svgEl.clientWidth - 120, e.clientX - svgRect.left - dx));
+      node.y = Math.max(0, Math.min(svgEl.clientHeight - 40, e.clientY - svgRect.top - dy));
+      renderInfluence();
+    }
+    function onUp() {
+      dragActive = false;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    }
+
+    // Double-click to edit label
+    g.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      const newLabel = prompt('Label bearbeiten:', node.label);
+      if (newLabel && newLabel.trim()) { node.label = newLabel.trim(); renderInfluence(); }
+    });
+
+    svgEl.appendChild(g);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ── TAB 5: NOTES ─────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════
+function loadNotes() {
+  try {
+    const saved = localStorage.getItem('k_research_notes');
+    return saved ? JSON.parse(saved) : [];
+  } catch(e) { return []; }
+}
+
+function saveNotes(notes) {
+  try { localStorage.setItem('k_research_notes', JSON.stringify(notes)); } catch(e) {}
+}
+
+function extractTags(text) {
+  const tags = [];
+  if (/\#rq1/i.test(text)) tags.push('rq1');
+  if (/\#rq2/i.test(text)) tags.push('rq2');
+  if (/\#rq3/i.test(text)) tags.push('rq3');
+  if (/\#wtp/i.test(text)) tags.push('wtp');
+  if (/\#nudge/i.test(text)) tags.push('nudge');
+  return tags;
+}
+
+function formatNoteDate(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString('de-CH', { day:'numeric', month:'short', year:'numeric' })
+    + ' · ' + d.toLocaleTimeString('de-CH', { hour:'2-digit', minute:'2-digit' });
+}
+
+function renderNotes() {
+  const notes = loadNotes();
+  const list = document.getElementById('notes-list');
+  list.innerHTML = '';
+  if (notes.length === 0) {
+    list.innerHTML = '<div class="empty-notes">Noch keine Notizen. Füge deine erste hinzu.</div>';
+    return;
+  }
+  [...notes].reverse().forEach(note => {
+    const tagHtml = (note.tags || []).map(t => `<span class="note-tag ${t}">#${t}</span>`).join('');
+    const processHtml = note.process ? '<span class="process-badge">→ Claude Aufbereitung</span>' : '';
+    const card = document.createElement('div');
+    card.className = `note-card${note.process ? ' process' : ''}`;
+    card.innerHTML = `
+      <div class="note-meta">${formatNoteDate(note.date)} ${tagHtml}</div>
+      <div class="note-text">${escapeHtml(note.text)}</div>
+      <div class="note-actions">
+        <button class="delete-note" data-id="${note.id}">Löschen</button>
+        ${processHtml}
+      </div>
+    `;
+    card.querySelector('.delete-note').addEventListener('click', () => {
+      const notes2 = loadNotes().filter(n => n.id !== note.id);
+      saveNotes(notes2);
+      renderNotes();
+    });
+    list.appendChild(card);
+  });
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function initNotes() {
+  renderNotes();
+  document.getElementById('add-note-btn').addEventListener('click', () => {
+    const text = document.getElementById('note-input').value.trim();
+    if (!text) return;
+    const process = document.getElementById('process-toggle').checked;
+    const tags = extractTags(text);
+    const note = { id: Date.now().toString(), text, date: new Date().toISOString(), process, tags };
+    const notes = loadNotes();
+    notes.push(note);
+    saveNotes(notes);
+    document.getElementById('note-input').value = '';
+    document.getElementById('process-toggle').checked = false;
+    renderNotes();
+  });
+  document.getElementById('note-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      document.getElementById('add-note-btn').click();
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════
+// RESIZE HANDLER
+// ══════════════════════════════════════════════════════════════════
+window.addEventListener('resize', () => {
+  if (document.getElementById('tab-timeline').classList.contains('active')) {
+    renderTimeline();
+  }
+  if (document.getElementById('tab-graph').classList.contains('active') && graphInitialized) {
+    if (simulation) { simulation.stop(); simulation = null; }
+    renderGraph(graphFilter);
+  }
+  if (document.getElementById('tab-influence').classList.contains('active')) {
+    renderInfluence();
+  }
+});
+</script>
+</body>
+</html>

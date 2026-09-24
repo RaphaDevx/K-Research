@@ -1,0 +1,41 @@
+{
+  "project": {
+    "id": "bachelorarbeit",
+    "title": "Bachelorarbeit — In-Destination Experience",
+    "subtitle": "Implizite WTP-Signale und Soft Guidance im Tourismus",
+    "supervisor": "Prof. Dr. Pietro Beritelli, IMP-HSG",
+    "status": "in_progress",
+    "start": "2026-09-14",
+    "end": "2027-03-15",
+    "color": "#4ecca3"
+  },
+  "milestones": [
+    { "id": "m1", "date": "2026-09-14", "label": "Erstkontakt Beritelli", "type": "done" },
+    { "id": "m2", "date": "2026-09-15", "label": "Beritelli antwortet", "type": "done" },
+    { "id": "m3", "date": "2026-09-22", "label": "Exposé fertig", "type": "done" },
+    { "id": "m4", "date": "2026-09-24", "label": "Exposé → Beritelli", "type": "deadline" },
+    { "id": "m5", "date": "2026-10-07", "label": "Erstgespräch Beritelli", "type": "planned" },
+    { "id": "m6", "date": "2026-10-15", "label": "Lit Review Start", "type": "planned" },
+    { "id": "m7", "date": "2026-11-15", "label": "Theorie-Kapitel Draft", "type": "planned" },
+    { "id": "m8", "date": "2026-12-01", "label": "Interview-Leitfaden fertig", "type": "planned" },
+    { "id": "m9", "date": "2027-01-10", "label": "Interviews abgeschlossen", "type": "planned" },
+    { "id": "m10", "date": "2027-01-25", "label": "Empirie-Kapitel Draft", "type": "planned" },
+    { "id": "m11", "date": "2027-02-10", "label": "Vollständiger Draft", "type": "planned" },
+    { "id": "m12", "date": "2027-02-28", "label": "Final Revision", "type": "deadline" },
+    { "id": "m13", "date": "2027-03-15", "label": "Abgabe", "type": "deadline" }
+  ],
+  "researchQuestions": [
+    { "id": "rq1", "label": "RQ1", "text": "Welche Verhaltenssignale im In-Destination-Erlebnis sind indikativ für implizite WTP?", "color": "#e879f9" },
+    { "id": "rq2", "label": "RQ2", "text": "Unter welchen Bedingungen werden Nudge+-Interventionen als fair und erlebniskonform wahrgenommen?", "color": "#f97316" },
+    { "id": "rq3", "label": "RQ3", "text": "Wie verhält sich ein WTP-Touchpoint-Framework zur bestehenden Destinationspraxis?", "color": "#60a5fa" }
+  ],
+  "chapters": [
+    { "id": "ch1", "label": "1. Einleitung", "status": "open" },
+    { "id": "ch2", "label": "2. Theoretischer Rahmen", "status": "active" },
+    { "id": "ch3", "label": "3. Konzeptuelles Framework", "status": "open" },
+    { "id": "ch4", "label": "4. Methodik", "status": "open" },
+    { "id": "ch5", "label": "5. Empirische Befunde", "status": "open" },
+    { "id": "ch6", "label": "6. Diskussion", "status": "open" },
+    { "id": "ch7", "label": "7. Fazit", "status": "open" }
+  ]
+}

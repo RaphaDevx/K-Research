@@ -1,0 +1,49 @@
+{
+  "name": "k-research",
+  "version": "1.0.0",
+  "description": "Research Dashboard — Bachelorarbeit HSG",
+  "main": "main.js",
+  "homepage": "https://github.com/RaphaDevx/K-Research",
+  "author": "RaphaDevx",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "build:mac": "electron-builder --mac dmg --arm64"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "24.13.3"
+  },
+  "build": {
+    "appId": "dev.raphadevx.k-research",
+    "productName": "K-Research",
+    "copyright": "Copyright © 2026 RaphaDevx",
+    "directories": {
+      "output": "release"
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://pub-f8a055810aee4622b6883b39e71485fe.r2.dev/k-research",
+        "channel": "latest"
+      }
+    ],
+    "files": [
+      "main.js",
+      "index.html",
+      "data/**",
+      "assets/**",
+      "!node_modules/.cache"
+    ],
+    "mac": {
+      "target": [
+        { "target": "dmg", "arch": ["arm64", "x64"] }
+      ],
+      "icon": "assets/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "notarize": false
+    }
+  }
+}
