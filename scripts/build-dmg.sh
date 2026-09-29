@@ -8,7 +8,6 @@ MAC_PATH="/Users/Builder/K-Research"
 LINUX_DEST="/home/raphael/K-Dev/Projekte/K-Research/release/"
 LOG="/tmp/kresearch_build_mac.log"
 KEYCHAIN="/Users/Builder/Library/Keychains/kdev-signing.keychain-db"
-KEYCHAIN_PASS="KDev2026!"
 SIGNING_ID="Raphael Markus Kaufmann (H6X9JDXF96)"
 R2_PREFIX="k-research"
 R2_BUCKET="k-advisory-releases"
@@ -45,7 +44,7 @@ $SSH "
 echo "[3/6] Building DMG + Zip (signed)..."
 $SSH "
   export PATH=\"/usr/local/bin:/opt/homebrew/bin:\$PATH\"
-  security unlock-keychain -p '$KEYCHAIN_PASS' '$KEYCHAIN'
+  /Users/Builder/bin/kdev-unlock-keychain
   security list-keychains -d user \
     -s '$KEYCHAIN' /Library/Keychains/System.keychain /System/Library/Keychains/SystemRootCertificates.keychain
   cd $MAC_PATH
