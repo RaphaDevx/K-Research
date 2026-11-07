@@ -89,7 +89,7 @@ function createWindow() {
         { type: 'separator' },
         {
           label: 'Nach Updates suchen…',
-          click: () => autoUpdater.checkForUpdates(),
+          click: () => autoUpdater.checkForUpdates().catch(err => dialog.showMessageBox(mainWindow, {type: 'warning', message: 'Update-Prüfung fehlgeschlagen', detail: String(err.message)})),
         },
         { type: 'separator' },
         { label: 'Beenden', accelerator: 'Cmd+Q', click: () => app.quit() },
@@ -116,13 +116,20 @@ function createWindow() {
   ]));
 }
 
+// One installed identity: do not start a second window/backend from another copy.
+const ownsInstance = app.requestSingleInstanceLock();
+if (!ownsInstance) app.quit();
+app.on('second-instance', () => { if (mainWindow) { if (mainWindow.isMinimized()) mainWindow.restore(); mainWindow.show(); mainWindow.focus(); } });
+
 // ── App lifecycle ─────────────────────────────────────────────────────────────
 app.whenReady().then(() => {
+  if (!ownsInstance) return;
   createWindow();
 
   // Check for updates 3 seconds after launch (only in packaged app)
   if (app.isPackaged) {
-    setTimeout(() => autoUpdater.checkForUpdates(), 3000);
+    setTimeout(() => autoUpdater.checkForUpdates().catch(() => {}), 3000);
+    setInterval(() => autoUpdater.checkForUpdates().catch(() => {}), 4 * 60 * 60 * 1000);
   }
 
   app.on('activate', () => {

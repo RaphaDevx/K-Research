@@ -1,6 +1,6 @@
 {
   "name": "k-research",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Research Dashboard — Bachelorarbeit HSG",
   "main": "main.js",
   "homepage": "https://github.com/RaphaDevx/K-Research",
@@ -25,13 +25,11 @@
     "directories": {
       "output": "release"
     },
-    "publish": [
-      {
-        "provider": "generic",
-        "url": "https://pub-f8a055810aee4622b6883b39e71485fe.r2.dev/k-research",
-        "channel": "latest"
-      }
-    ],
+    "publish": {
+      "provider": "generic",
+      "url": "https://pub-f8a055810aee4622b6883b39e71485fe.r2.dev/k-research",
+      "channel": "latest"
+    },
     "files": [
       "main.js",
       "index.html",
@@ -41,8 +39,18 @@
     ],
     "mac": {
       "target": [
-        { "target": "dmg", "arch": ["arm64"] },
-        { "target": "zip", "arch": ["arm64"] }
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64"
+          ]
+        }
       ],
       "icon": "assets/icon.icns",
       "hardenedRuntime": true,

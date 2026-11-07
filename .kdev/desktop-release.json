@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "bundleIdentifier": "dev.raphadevx.k-research",
+  "bundleName": "K-Research.app",
+  "feed": "https://pub-f8a055810aee4622b6883b39e71485fe.r2.dev/k-research/latest-mac.yml",
+  "singleInstance": true,
+  "installation": "applications",
+  "evidenceFiles": [
+    "main.js"
+  ]
+}
